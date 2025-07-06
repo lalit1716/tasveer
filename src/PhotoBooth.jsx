@@ -380,9 +380,9 @@ export default function PurikuraBooth() {
   };
 
   return (
-    <div className="h-dvh w-dvw bg-gradient-to-r from-[#FD9A3A] to-[#C49ED4] flex items-center justify-center p-6">
+    <div className="h-auto w-vw bg-gradient-to-r from-[#FD9A3A] to-[#C49ED4] flex items-center justify-center p-6">
       {showGallery ? (
-        <div className="flex flex-col gap-3 items-center">
+        <div className="flex flex-col gap-3 items-center h-auto">
           <div
             ref={galleryRef}
             style={{ background: "#fff", color: "#7e22ce" }}
