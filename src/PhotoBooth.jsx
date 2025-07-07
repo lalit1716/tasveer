@@ -9,6 +9,7 @@ const filters = {
   Warm: "sepia(0.2) saturate(1.2)",
   "High Contrast": "contrast(1.5)",
   Dream: "blur(1px) brightness(1.2)",
+  Vignette: "none", // Keep as "none" for CSS filter
 };
 
 export default function PurikuraBooth() {
@@ -21,8 +22,9 @@ export default function PurikuraBooth() {
   const [showGallery, setShowGallery] = useState(false);
   const [photoCount, setPhotoCount] = useState(2);
   const [countdown, setCountdown] = useState(null);
-  const [flash, setFlash] = useState(false); // New flash state
+  const [flash, setFlash] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownload, setIsDownload] = useState(false);
 
   useEffect(() => {
     enableCamera();
@@ -32,9 +34,40 @@ export default function PurikuraBooth() {
   }, []);
 
   useEffect(() => {
+    if (isDownload) return;
     if (videoRef.current) {
-      videoRef.current.style.filter = filters[filter];
+      const videoWrapper = videoRef.current.closest(".video-wrapper");
+      if (!videoWrapper) return;
+
+      // Apply regular filter
+      videoRef.current.style.filter =
+        filter === "Vignette" ? "none" : filters[filter];
       videoRef.current.style.transform = "scaleX(-1)";
+
+      // Manage vignette overlay
+      let vignetteOverlay = videoWrapper.querySelector(".vignette-overlay");
+
+      if (filter === "Vignette") {
+        if (!vignetteOverlay) {
+          vignetteOverlay = document.createElement("div");
+          vignetteOverlay.className = "vignette-overlay";
+          vignetteOverlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0.8) 100%);
+            z-index: 2;
+          `;
+          videoWrapper.appendChild(vignetteOverlay);
+        }
+      } else {
+        if (vignetteOverlay) {
+          vignetteOverlay.remove();
+        }
+      }
     }
   }, [filter]);
 
@@ -63,10 +96,30 @@ export default function PurikuraBooth() {
         const ctx = canvasRef.current.getContext("2d");
         canvasRef.current.width = videoRef.current.videoWidth;
         canvasRef.current.height = videoRef.current.videoHeight;
-        ctx.filter = filters[filter];
+
+        // Apply CSS filter to canvas context for non-vignette effects
+        ctx.filter = filter === "Vignette" ? "none" : filters[filter];
         ctx.translate(canvasRef.current.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(videoRef.current, 0, 0);
+
+        // Add vignette effect to captured image if Vignette filter is selected
+        if (filter === "Vignette") {
+          const gradient = ctx.createRadialGradient(
+            canvasRef.current.width / 2,
+            canvasRef.current.height / 2,
+            0,
+            canvasRef.current.width / 2,
+            canvasRef.current.height / 2,
+            Math.max(canvasRef.current.width, canvasRef.current.height) * 0.6
+          );
+          gradient.addColorStop(0, "rgba(0,0,0,0)");
+          gradient.addColorStop(1, "rgba(0,0,0,0.7)");
+
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
+
         const dataURL = canvasRef.current.toDataURL("image/png");
         captured.push(dataURL);
       }
@@ -180,14 +233,6 @@ export default function PurikuraBooth() {
           (cardWidth + shadowPadding * 2) / 2,
           shadowPadding + titleHeight / 2 + 5
         ); // Center in title area with top padding
-
-        // ==== Draw decorative divider line below title ====
-        // ctx.strokeStyle = "#7e22ce"; // Same purple as title
-        // ctx.lineWidth = 1; // Thin line
-        // ctx.beginPath();
-        // ctx.moveTo(cardPadding, titleHeight - 10); // Start with left padding
-        // ctx.lineTo(cardWidth - cardPadding, titleHeight - 10); // End with right padding
-        // ctx.stroke();
       };
 
       // ==== Image loading and drawing logic ====
@@ -278,18 +323,6 @@ export default function PurikuraBooth() {
     });
   };
 
-  // Alternative version that ensures font is loaded
-  const createCollageWithFontLoading = async () => {
-    // Wait for font to be loaded
-    try {
-      await document.fonts.load("700 26px 'Fleur De Leah'");
-    } catch (e) {
-      console.warn("Font loading failed, using fallback");
-    }
-
-    return createCollage();
-  };
-
   const handlePrint = async () => {
     try {
       const collageDataURL = await createCollage();
@@ -364,18 +397,8 @@ export default function PurikuraBooth() {
     }
   };
 
-  // const handleDownloadIndividual = (photoSrc, index) => {
-  //   const link = document.createElement("a");
-  //   link.href = photoSrc;
-  //   link.download = `photo-${index + 1}-${
-  //     new Date().toISOString().split("T")[0]
-  //   }.png`;
-  //   document.body.appendChild(link);
-  //   link.click();
-  //   document.body.removeChild(link);
-  // };
-
   const handleClick = () => {
+    setIsDownload(true);
     handleDownload(setIsDownloading);
   };
 
@@ -408,13 +431,6 @@ export default function PurikuraBooth() {
                     alt={`snapshot-${i}`}
                     className="w-full h-full object-cover"
                   />
-                  {/* <button
-                    onClick={() => handleDownloadIndividual(src, i)}
-                    className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Download this photo"
-                  >
-                    💾
-                  </button> */}
                 </div>
               ))}
             </div>
@@ -482,17 +498,21 @@ export default function PurikuraBooth() {
       ) : (
         <div className="bg-[#D78FB1] flex flex-col items-center space-y-6 p-10 w-full md:w-[55%] rounded-2xl">
           <div className="aspect-3/2 xl:aspect-none xl:w-[100%] xl:h-[500px] relative overflow-hidden rounded-xl shadow-md">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
+            <div className="video-wrapper relative w-full h-full">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            </div>
+
             {countdown && (
               <div className="text-4xl text-white font-bold animate-pulse absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[999] yellowtail-regular">
                 {countdown}
               </div>
             )}
+
             {flash && (
               <div className="absolute top-0 left-0 w-full h-full bg-white opacity-80 z-[998] animate-flash pointer-events-none"></div>
             )}
