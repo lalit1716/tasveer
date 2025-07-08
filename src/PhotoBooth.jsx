@@ -292,11 +292,11 @@ export default function PurikuraBooth() {
           ctx.restore(); // Restore canvas state (removes clipping)
 
           // ==== Add subtle border around image ====
-          ctx.strokeStyle = "#e5b4f3"; // Light purple border
-          ctx.lineWidth = 0.5; // Thin border
-          ctx.beginPath();
-          ctx.roundRect(x, y, photoWidth, photoHeight, 12);
-          ctx.stroke();
+          // ctx.strokeStyle = "#e5b4f3"; // Light purple border
+          // ctx.lineWidth = 0.5; // Thin border
+          // ctx.beginPath();
+          // ctx.roundRect(x, y, photoWidth, photoHeight, 12);
+          // ctx.stroke();
 
           // ==== Track loading progress ====
           loadedImages++;
