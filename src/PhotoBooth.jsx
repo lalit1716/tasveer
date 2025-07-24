@@ -428,6 +428,8 @@ export default function PurikuraBooth() {
                 >
                   <img
                     src={src}
+width={1500}
+height={1000}
                     alt={`snapshot-${i}`}
                     className="w-full h-full object-cover"
                   />
